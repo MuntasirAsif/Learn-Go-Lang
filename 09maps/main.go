@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("Maos in golang");
+	fmt.Println("Maps in golang");
 
 	languages := make(map[string]string);
 
@@ -19,7 +19,7 @@ func main() {
 	fmt.Println("List of all languages after delete: ", languages)
 
 	fmt.Println("Js shorts for: ", languages["JS"])
-	
+
 	for key, value :=range languages{
 		fmt.Println("Key:", key, "Value:", value)
 	}

@@ -6,7 +6,7 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/hello",  // << POINT HERE
+      "program": "${workspaceFolder}/hello",
       "console": "integratedTerminal"
     }
   ]
