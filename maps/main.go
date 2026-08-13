@@ -3,9 +3,9 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("Maps in golang");
+	fmt.Println("Maps in golang")
 
-	languages := make(map[string]string);
+	languages := make(map[string]string)
 
 	languages["JS"] = "JavaScript"
 	languages["RB"] = "Ruby"
@@ -20,7 +20,7 @@ func main() {
 
 	fmt.Println("Js shorts for: ", languages["JS"])
 
-	for key, value :=range languages{
+	for key, value := range languages {
 		fmt.Println("Key:", key, "Value:", value)
 	}
 }
