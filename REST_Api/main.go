@@ -29,9 +29,14 @@ func homePage(w http.ResponseWriter , r *http.Request){
 	fmt.Fprintf(w, "Home page endpoint hit")
 }
 
+func createArticle(w http.ResponseWriter, r *http.Request){
+	fmt.Fprintf(w, "Create Article endpoint hit")
+}
+
 func handleRequests(){
 	http.HandleFunc("/",homePage)
 	http.HandleFunc("/articles", allArticles)
+	http.HandleFunc("/create",createArticle)
 	log.Fatal(http.ListenAndServe(":8081",nil))
 }
 
