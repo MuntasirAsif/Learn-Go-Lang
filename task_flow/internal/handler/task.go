@@ -5,6 +5,7 @@ import (
 	"learn-go/internal/model"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -47,9 +48,9 @@ func CreateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	response := model.APIResponse{
-		Status: "success",
+		Status:  "success",
 		Message: "Task created successfully",
-		Data: task,
+		Data:    task,
 	}
 	json.NewEncoder(w).Encode(response)
 }
@@ -64,4 +65,28 @@ func GetTasks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(response)
+}
+
+func GetTaskById(w http.ResponseWriter, r *http.Request) {
+	idString := r.PathValue("id")
+
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		log.Fatal("Error parsing ID: ", err)
+	}
+
+	for _, task := range tasks {
+		if task.ID == id {
+			w.Header().Set("Content-Type", "application/json")
+			response := model.APIResponse{
+				Status:  "success",
+				Message: "Task fetched successfully",
+				Data:    task,
+			}
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	}
+
+	http.Error(w, "Task not found", http.StatusNotFound)
 }
