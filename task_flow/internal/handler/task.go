@@ -46,7 +46,12 @@ func CreateTask(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(task)
+	response := model.APIResponse{
+		Status: "success",
+		Message: "Task created successfully",
+		Data: task,
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 func GetTasks(w http.ResponseWriter, r *http.Request) {
