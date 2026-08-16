@@ -9,7 +9,8 @@ import (
 func main() {
 	http.HandleFunc("/health", handler.Health)
 	http.HandleFunc("/tasks", handler.Tasks)
-	http.HandleFunc("/tasks/{id}", handler.GetTaskById)
+	http.HandleFunc("GET /tasks/{id}", handler.GetTaskById)
+	http.HandleFunc("PUT /tasks/{id}", handler.UpdateTask)
 
 	log.Println("Starting server on port http://localhost:8080")
 

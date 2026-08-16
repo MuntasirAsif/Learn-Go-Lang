@@ -90,3 +90,39 @@ func GetTaskById(w http.ResponseWriter, r *http.Request) {
 
 	http.Error(w, "Task not found", http.StatusNotFound)
 }
+
+func UpdateTask(w http.ResponseWriter, r *http.Request) {
+	idString := r.PathValue("id")
+
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		log.Fatal("Error parsing ID: ", err)
+	}
+
+	var updatedTask model.Task
+
+	err = json.NewDecoder(r.Body).Decode(&updatedTask)
+
+	if err != nil {
+		log.Fatal("Error parsing JSON: ", err)
+	}
+
+	updatedTask.ID = id
+	updatedTask.UpdatedAt = time.Now()
+
+	for i, task := range tasks {
+		if task.ID == id {
+			tasks[i] = updatedTask
+			w.Header().Set("Content-Type", "application/json")
+			response := model.APIResponse{
+				Status:  "success",
+				Message: "Task updated successfully",
+				Data:    updatedTask,
+			}
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	}
+
+	http.Error(w, "Task not found", http.StatusNotFound)
+}
