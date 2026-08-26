@@ -126,3 +126,39 @@ func UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	http.Error(w, "Task not found", http.StatusNotFound)
 }
+
+func DeleteTask(w http.ResponseWriter, r *http.Request) {
+	idString := r.PathValue("id")
+
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		log.Fatal("Error parsing ID: ", err)
+	}
+
+	for i, task := range tasks {
+		if task.ID == id {
+			tasks = append(tasks[:i], tasks[i+1:]...)
+			w.Header().Set("Content-Type", "application/json")
+			response := model.APIResponse{
+				Status:  "success",
+				Message: "Task deleted successfully",
+			}
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	}
+
+	http.Error(w, "Task not found", http.StatusNotFound)
+}
+
+func DeleteAllTask(w http.ResponseWriter, r *http.Request) {
+	tasks = []model.Task{}
+
+	w.Header().Set("Content-Type", "application/json")
+	response := model.APIResponse{
+		Status:  "success",
+		Message: "All tasks deleted successfully",
+	}
+
+	json.NewEncoder(w).Encode(response)
+}

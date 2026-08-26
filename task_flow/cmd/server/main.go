@@ -11,6 +11,8 @@ func main() {
 	http.HandleFunc("/tasks", handler.Tasks)
 	http.HandleFunc("GET /tasks/{id}", handler.GetTaskById)
 	http.HandleFunc("PUT /tasks/{id}", handler.UpdateTask)
+	http.HandleFunc("DELETE /tasks/{id}", handler.DeleteTask)
+	http.HandleFunc("DELETE /tasks", handler.DeleteAllTask)
 
 	log.Println("Starting server on port http://localhost:8080")
 
