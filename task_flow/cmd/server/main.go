@@ -2,17 +2,25 @@ package main
 
 import (
 	"learn-go/internal/handler"
+	"learn-go/internal/repository"
+	"learn-go/internal/service"
 	"log"
 	"net/http"
 )
 
 func main() {
+	taskRepo := repository.NewTaskRepository()
+
+	taskService := service.NewTaskService(taskRepo)
+
+	taskHandler := handler.NewTaskHandler(taskService)
+
 	http.HandleFunc("/health", handler.Health)
-	http.HandleFunc("/tasks", handler.Tasks)
-	http.HandleFunc("GET /tasks/{id}", handler.GetTaskById)
-	http.HandleFunc("PUT /tasks/{id}", handler.UpdateTask)
-	http.HandleFunc("DELETE /tasks/{id}", handler.DeleteTask)
-	http.HandleFunc("DELETE /tasks", handler.DeleteAllTask)
+	http.HandleFunc("/tasks", taskHandler.Tasks)
+	http.HandleFunc("GET /tasks/{id}", taskHandler.GetTaskById)
+	http.HandleFunc("PUT /tasks/{id}", taskHandler.UpdateTask)
+	http.HandleFunc("DELETE /tasks/{id}", taskHandler.DeleteTask)
+	http.HandleFunc("DELETE /tasks", taskHandler.DeleteAllTask)
 
 	log.Println("Starting server on port http://localhost:8080")
 

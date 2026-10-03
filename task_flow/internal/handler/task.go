@@ -3,61 +3,62 @@ package handler
 import (
 	"encoding/json"
 	"learn-go/internal/model"
-	"log"
+	"learn-go/internal/service"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-var tasks []model.Task
-var nextId = 1
+type TaskHandler struct {
+	taskService *service.TaskService
+}
 
-func Tasks(w http.ResponseWriter, r *http.Request) {
+func NewTaskHandler(taskService *service.TaskService) *TaskHandler {
+	return &TaskHandler{taskService: taskService}
+}
+
+func (h *TaskHandler) Tasks(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		CreateTask(w, r)
+		h.CreateTask(w, r)
 
 	case http.MethodGet:
-		GetTasks(w, r)
+		h.GetTasks(w, r)
 
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func CreateTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var task model.Task
 
 	err := json.NewDecoder(r.Body).Decode(&task)
-
 	if err != nil {
-		log.Fatal("Error parsing JSON: ", err)
+		http.Error(w, "Error parsing JSON: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	task.ID = nextId
-	nextId++
-
 	task.CreatedAt = time.Now()
-
 	task.UpdatedAt = time.Now()
-
 	task.Status = "pending"
 
-	tasks = append(tasks, task)
+	createdTask := h.taskService.Create(task)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	response := model.APIResponse{
 		Status:  "success",
 		Message: "Task created successfully",
-		Data:    task,
+		Data:    createdTask,
 	}
 	json.NewEncoder(w).Encode(response)
 }
 
-func GetTasks(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	tasks := h.taskService.GetAll()
 	response := model.APIResponse{
 		Status:  "success",
 		Message: "Tasks fetched successfully",
@@ -67,92 +68,88 @@ func GetTasks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func GetTaskById(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) GetTaskById(w http.ResponseWriter, r *http.Request) {
 	idString := r.PathValue("id")
 
 	id, err := strconv.Atoi(idString)
 	if err != nil {
-		log.Fatal("Error parsing ID: ", err)
+		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		return
 	}
 
-	for _, task := range tasks {
-		if task.ID == id {
-			w.Header().Set("Content-Type", "application/json")
-			response := model.APIResponse{
-				Status:  "success",
-				Message: "Task fetched successfully",
-				Data:    task,
-			}
-			json.NewEncoder(w).Encode(response)
-			return
-		}
+	task, found := h.taskService.GetById(id)
+	if !found {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
 	}
 
-	http.Error(w, "Task not found", http.StatusNotFound)
+	w.Header().Set("Content-Type", "application/json")
+	response := model.APIResponse{
+		Status:  "success",
+		Message: "Task fetched successfully",
+		Data:    task,
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
-func UpdateTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	idString := r.PathValue("id")
 
 	id, err := strconv.Atoi(idString)
 	if err != nil {
-		log.Fatal("Error parsing ID: ", err)
+		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		return
 	}
 
 	var updatedTask model.Task
-
 	err = json.NewDecoder(r.Body).Decode(&updatedTask)
-
 	if err != nil {
-		log.Fatal("Error parsing JSON: ", err)
+		http.Error(w, "Error parsing JSON: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	updatedTask.ID = id
 	updatedTask.UpdatedAt = time.Now()
 
-	for i, task := range tasks {
-		if task.ID == id {
-			tasks[i] = updatedTask
-			w.Header().Set("Content-Type", "application/json")
-			response := model.APIResponse{
-				Status:  "success",
-				Message: "Task updated successfully",
-				Data:    updatedTask,
-			}
-			json.NewEncoder(w).Encode(response)
-			return
-		}
+	task, found := h.taskService.Update(id, updatedTask)
+	if !found {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
 	}
 
-	http.Error(w, "Task not found", http.StatusNotFound)
+	w.Header().Set("Content-Type", "application/json")
+	response := model.APIResponse{
+		Status:  "success",
+		Message: "Task updated successfully",
+		Data:    task,
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
-func DeleteTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	idString := r.PathValue("id")
 
 	id, err := strconv.Atoi(idString)
 	if err != nil {
-		log.Fatal("Error parsing ID: ", err)
+		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		return
 	}
 
-	for i, task := range tasks {
-		if task.ID == id {
-			tasks = append(tasks[:i], tasks[i+1:]...)
-			w.Header().Set("Content-Type", "application/json")
-			response := model.APIResponse{
-				Status:  "success",
-				Message: "Task deleted successfully",
-			}
-			json.NewEncoder(w).Encode(response)
-			return
-		}
+	deleted := h.taskService.Delete(id)
+	if !deleted {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
 	}
 
-	http.Error(w, "Task not found", http.StatusNotFound)
+	w.Header().Set("Content-Type", "application/json")
+	response := model.APIResponse{
+		Status:  "success",
+		Message: "Task deleted successfully",
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
-func DeleteAllTask(w http.ResponseWriter, r *http.Request) {
-	tasks = []model.Task{}
+func (h *TaskHandler) DeleteAllTask(w http.ResponseWriter, r *http.Request) {
+	h.taskService.DeleteAll()
 
 	w.Header().Set("Content-Type", "application/json")
 	response := model.APIResponse{
