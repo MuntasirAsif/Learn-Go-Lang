@@ -1,65 +1,101 @@
 package repository
 
-import "learn-go/internal/model"
+import (
+	"context"
+	"errors"
+	"learn-go/internal/model"
+	"log"
+
+	"github.com/jackc/pgx/v5"
+)
 
 type TaskRepository struct {
-	tasks  []model.Task
-	nextId int
+	db *pgx.Conn
 }
 
-func NewTaskRepository() *TaskRepository {
+func NewTaskRepository(db *pgx.Conn) *TaskRepository {
 	return &TaskRepository{
-		tasks:  make([]model.Task, 0),
-		nextId: 1,
+		db: db,
 	}
 }
 
 func (r *TaskRepository) Create(task model.Task) model.Task {
-	if r.nextId == 0 {
-		r.nextId = 1
-	}
-	task.ID = r.nextId
-	r.nextId++
+	err := r.db.QueryRow(
+		context.Background(),
+		"INSERT INTO tasks (title, description, status) VALUES ($1, $2, $3) RETURNING id",
+		task.Title, task.Description, task.Status,
+	).Scan(&task.ID)
 
-	r.tasks = append(r.tasks, task)
+	if err != nil {
+		log.Println("Error inserting task:", err)
+		return model.Task{}
+	}
 
 	return task
 }
 
 func (r *TaskRepository) GetAll() []model.Task {
-	return r.tasks
+	rows, err := r.db.Query(context.Background(), "SELECT id, title, description, status FROM tasks")
+
+	if err != nil {
+		log.Println("Error querying tasks:", err)
+		
+		return []model.Task{}
+	}
+	defer rows.Close()
+
+	var tasks []model.Task
+
+	for rows.Next() {
+		var task model.Task
+		err := rows.Scan(&task.ID, &task.Title, &task.Description, &task.Status)
+		if err != nil {
+			log.Println("Error scanning task:", err)
+			continue
+		}
+		tasks = append(tasks, task)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Println("Rows iteration error:", err)
+	}
+
+	if tasks == nil {
+		tasks = []model.Task{}
+	}
+
+	return tasks
 }
 
 func (r *TaskRepository) GetById(id int) (model.Task, bool) {
-	for _, task := range r.tasks {
-		if task.ID == id {
-			return task, true
+	var task model.Task
+	err := r.db.QueryRow(context.Background(), "SELECT id, title, description, status FROM tasks WHERE id = $1", id).Scan(&task.ID, &task.Title, &task.Description, &task.Status)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.Task{}, false
 		}
+		log.Println("Error getting task by ID:", err)
+		return model.Task{}, false
 	}
-	return model.Task{}, false
+	return task, true
 }
 
 func (r *TaskRepository) Update(id int, updatedTask model.Task) (model.Task, bool) {
-	for i, task := range r.tasks {
-		if task.ID == id {
-			updatedTask.ID = id
-			r.tasks[i] = updatedTask
-			return updatedTask, true
+	var task model.Task
+	err := r.db.QueryRow(context.Background(), "UPDATE tasks SET title = $1, description = $2, status = $3 WHERE id = $4 RETURNING id, title, description, status", updatedTask.Title, updatedTask.Description, updatedTask.Status, id).Scan(&task.ID, &task.Title, &task.Description, &task.Status)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.Task{}, false
 		}
+		log.Println("Error updating task:", err)
+		return model.Task{}, false
 	}
-	return model.Task{}, false
+	return task, true
 }
 
 func (r *TaskRepository) Delete(id int) bool {
-	for i, task := range r.tasks {
-		if task.ID == id {
-			r.tasks = append(r.tasks[:i], r.tasks[i+1:]...)
-			return true
-		}
-	}
 	return false
 }
 
 func (r *TaskRepository) DeleteAll() {
-	r.tasks = []model.Task{}
 }

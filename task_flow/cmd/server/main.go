@@ -12,14 +12,14 @@ import (
 
 func main() {
 	databaseURL := "postgres://macmini@localhost:5432/taskflow"
-	
+
 	conn, err := database.Connect(databaseURL)
 	if err != nil {
 		log.Fatal("Database connection failed:", err)
 	}
 	defer conn.Close(context.Background())
 
-	taskRepo := repository.NewTaskRepository()
+	taskRepo := repository.NewTaskRepository(conn)
 
 	taskService := service.NewTaskService(taskRepo)
 

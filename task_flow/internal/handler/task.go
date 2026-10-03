@@ -17,6 +17,17 @@ func NewTaskHandler(taskService *service.TaskService) *TaskHandler {
 	return &TaskHandler{taskService: taskService}
 }
 
+func sendJSON(w http.ResponseWriter, statusCode int, status bool, message string, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(model.APIResponse{
+		Status:     status,
+		StatusCode: statusCode,
+		Message:    message,
+		Data:       data,
+	})
+}
+
 func (h *TaskHandler) Tasks(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
@@ -26,7 +37,7 @@ func (h *TaskHandler) Tasks(w http.ResponseWriter, r *http.Request) {
 		h.GetTasks(w, r)
 
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		sendJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", nil)
 	}
 }
 
@@ -35,7 +46,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&task)
 	if err != nil {
-		http.Error(w, "Error parsing JSON: "+err.Error(), http.StatusBadRequest)
+		sendJSON(w, http.StatusBadRequest, false, "Error parsing JSON: "+err.Error(), nil)
 		return
 	}
 
@@ -45,27 +56,12 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 	createdTask := h.taskService.Create(task)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	response := model.APIResponse{
-		Status:  "success",
-		Message: "Task created successfully",
-		Data:    createdTask,
-	}
-	json.NewEncoder(w).Encode(response)
+	sendJSON(w, http.StatusCreated, true, "Task created successfully", createdTask)
 }
 
 func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	tasks := h.taskService.GetAll()
-	response := model.APIResponse{
-		Status:  "success",
-		Message: "Tasks fetched successfully",
-		Data:    tasks,
-	}
-
-	json.NewEncoder(w).Encode(response)
+	sendJSON(w, http.StatusOK, true, "Tasks fetched successfully", tasks)
 }
 
 func (h *TaskHandler) GetTaskById(w http.ResponseWriter, r *http.Request) {
@@ -73,23 +69,17 @@ func (h *TaskHandler) GetTaskById(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(idString)
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		sendJSON(w, http.StatusBadRequest, false, "Invalid task ID", nil)
 		return
 	}
 
 	task, found := h.taskService.GetById(id)
 	if !found {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		sendJSON(w, http.StatusNotFound, false, "task not available for this id", nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	response := model.APIResponse{
-		Status:  "success",
-		Message: "Task fetched successfully",
-		Data:    task,
-	}
-	json.NewEncoder(w).Encode(response)
+	sendJSON(w, http.StatusOK, true, "Task fetched successfully", task)
 }
 
 func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
@@ -97,14 +87,14 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(idString)
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		sendJSON(w, http.StatusBadRequest, false, "Invalid task ID", nil)
 		return
 	}
 
 	var updatedTask model.Task
 	err = json.NewDecoder(r.Body).Decode(&updatedTask)
 	if err != nil {
-		http.Error(w, "Error parsing JSON: "+err.Error(), http.StatusBadRequest)
+		sendJSON(w, http.StatusBadRequest, false, "Error parsing JSON: "+err.Error(), nil)
 		return
 	}
 
@@ -112,17 +102,11 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	task, found := h.taskService.Update(id, updatedTask)
 	if !found {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		sendJSON(w, http.StatusNotFound, false, "task not available for this id", nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	response := model.APIResponse{
-		Status:  "success",
-		Message: "Task updated successfully",
-		Data:    task,
-	}
-	json.NewEncoder(w).Encode(response)
+	sendJSON(w, http.StatusOK, true, "Task updated successfully", task)
 }
 
 func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
@@ -130,32 +114,20 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(idString)
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		sendJSON(w, http.StatusBadRequest, false, "Invalid task ID", nil)
 		return
 	}
 
 	deleted := h.taskService.Delete(id)
 	if !deleted {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		sendJSON(w, http.StatusNotFound, false, "task not available for this id", nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	response := model.APIResponse{
-		Status:  "success",
-		Message: "Task deleted successfully",
-	}
-	json.NewEncoder(w).Encode(response)
+	sendJSON(w, http.StatusOK, true, "Task deleted successfully", nil)
 }
 
 func (h *TaskHandler) DeleteAllTask(w http.ResponseWriter, r *http.Request) {
 	h.taskService.DeleteAll()
-
-	w.Header().Set("Content-Type", "application/json")
-	response := model.APIResponse{
-		Status:  "success",
-		Message: "All tasks deleted successfully",
-	}
-
-	json.NewEncoder(w).Encode(response)
+	sendJSON(w, http.StatusOK, true, "All tasks deleted successfully", nil)
 }
