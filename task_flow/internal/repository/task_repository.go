@@ -39,7 +39,7 @@ func (r *TaskRepository) GetAll() []model.Task {
 
 	if err != nil {
 		log.Println("Error querying tasks:", err)
-		
+
 		return []model.Task{}
 	}
 	defer rows.Close()
@@ -94,8 +94,17 @@ func (r *TaskRepository) Update(id int, updatedTask model.Task) (model.Task, boo
 }
 
 func (r *TaskRepository) Delete(id int) bool {
-	return false
+	err := r.db.QueryRow(context.Background(), "DELETE FROM tasks WHERE id = $1 RETURNING id", id).Scan(&id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false
+		}
+		log.Println("Error deleting task:", err)
+		return false
+	}
+	return true
 }
 
 func (r *TaskRepository) DeleteAll() {
+	r.db.QueryRow(context.Background(), "DELETE FROM tasks")
 }
